@@ -37,3 +37,13 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# pdf files
+*.pdf
+
+# data directory (datafile)
+data/
+
+# Vim swap files
+*.swp 
+

@@ -1,0 +1,169 @@
+---
+title: "Profiling Spatial Analysis"
+author: "Job Spijker"
+output: 
+  pdf_document:
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: yes
+urlcolor: blue    
+---
+
+```{r}
+# init
+library(rgdal)
+library(gdalUtils)
+library(sf)
+library(microbenchmark)
+library(raster)
+library(datafile)
+datafileInit()
+
+```
+
+
+
+# Introduction
+
+We first define a bunch of benchmarks. These are a collection of
+functions with very basic spatial I/O operations. Then we run all the
+benchmarks together
+
+# Raster analysis
+ Speed test using raster package
+ 
+## create raster
+First simple test, just the creation of a large raster
+
+```{r}
+
+
+# Create raster, use Dutch RD extent
+createRast <- function(xmin=0,xmax=280000,
+                        ymin=300000,ymax=625000,
+                        resolution=25) {
+
+    xcells=(xmax-xmin)/resolution
+    ycells=(ymax-ymin)/resolution
+
+    x <- raster::raster(xmn=xmin,
+                xmx=xmax,
+                ymn=ymin,
+                ymx=ymax,
+                nrows=ycells,
+                ncols=xcells,
+                crs=CRS("+init=epsg:28992")
+                )
+
+
+    #x[] <- 1:ncell(x)
+    x[] <- round(runif(n = ncell(x), min = 0, max = 1000))
+    return(x)
+}
+
+
+```
+
+## create raster, write to disk and read 
+
+```{r}
+
+write_rast <- function() {
+    x1 <- createRast()
+    fname <- datafile("rast")
+    writeRaster(x1, fname, overwrite = TRUE)
+    x2 <- raster(fname)
+
+}
+
+
+```
+
+# create rasters, stack and stats
+
+Create a few rasters, stack them and calculate some summary
+statistics. We use smaller rasters because of memory limitations
+
+```{r}
+rasts <- paste0("rast", 1:9)
+for(i in rasts) {
+    x <- createRast(xmax = 100000, ymin = 30000, ymax = 130000)
+    fname <- datafile(i)
+    writeRaster(x, fname, overwrite = TRUE)
+    rm(x)
+}
+
+rast_lst <- list()
+for(i in rasts) {
+    rast_lst[[i]] <- raster(datafile(i))
+}
+
+calc_stats <- function(l = rast_lst) {
+    s <- stack(l)
+    summary(s[])
+    rm(s)
+}
+
+
+
+
+```
+
+# vectors
+
+```{r}
+
+wfsuri <- "WFS:https://geodata.nationaalgeoregister.nl/wijkenbuurten2020/wfs?request=GetCapabilities&service=wfs"
+
+# get list of existing layers in WFS
+layers <- ogrListLayers(wfsuri)
+buurten <- layers[grep("cbs_buurten", layers)]
+buurten_layername <- gsub(".*:", "", buurten, perl=TRUE)
+fname_layer <- datafile(paste0(buurten_layername, ".gpkg"))
+fname_tmplayer <- datafile(paste0("tmp_", buurten_layername, ".gpkg"))
+
+# Only download layer from NGR if file does not exists
+if(!file.exists(fname_layer)) {
+    cat("Dowloading", buurten_layername, "\n")
+    ogr2ogr(wfsuri, fname_layer,
+            layer = buurten,
+            f = "GPKG")
+
+    ogr2ogr(fname_layer, fname_tmplayer, buurten, nlt = "MULTIPOLYGON")
+}
+
+read_write_sf <- function(fname = fname_layer) {
+
+    fname_tmp <- datafile("tmp.gpkg")
+    x <- st_read(fname_layer)
+    st_write(x, fname_tmp, quit = TRUE)
+    unlink(fname_tmp)
+}
+
+
+
+```
+
+# Run Benchmarks
+
+```{r}
+
+b <- microbenchmark(createRast(),
+                    write_rast(),
+                    calc_stats(),
+                    read_write_sf()
+)
+b
+
+```
+
+
+#cleanup
+
+```{r}
+rm(x); gc()
+removeTmpFiles(h=0)
+```
+
