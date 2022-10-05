@@ -1,0 +1,100 @@
+---
+title: "Profiling Spatial modelling Analysis"
+author: "Job Spijker"
+output: 
+  pdf_document:
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: yes
+urlcolor: blue    
+---
+
+```{r}
+
+remotes::install_github("gearslaboratory/gdalUtils")
+remotes::install_github("jspijker/datafile")
+
+# init
+library(rgdal)
+library(gdalUtils)
+library(sf)
+library(microbenchmark)
+library(raster)
+library(datafile)
+datafileInit()
+library(ranger)
+library(Boruta)
+```
+
+
+# Introduction
+
+Let's try some spatial modelling. We use the neighbourhood data from
+Statistics Netherlands (census data) as start. This data is downloaded
+in the `spatprof.Rmd` script
+
+```{r}
+if(!file.exists(datafile("cbs_buurten_2020.gpkg"))) {
+       stop("no data found")
+}
+
+cbs <- st_read(datafile("cbs_buurten_2020.gpkg"))
+vars <- names(cbs)[10:183]
+
+```
+
+# RandomForest
+
+We do a lot with randowm forest
+
+```{r}
+
+randvarcol <- floor(runif(n= 1, min = 1, max = length(vars))+1)
+randvarcol
+indep <- vars[randvarcol]
+dep <- vars[!grepl(indep, vars)]
+dep
+
+#create formula
+formule <- paste(indep,paste(dep,collapse="+"),sep="~")
+f <- as.formula(formule)
+
+
+mtry.factor  <-  1    
+mtry=round((length(dep)/3) * mtry.factor)
+
+d <- cbs %>%  
+    st_drop_geometry() %>%
+    dplyr::select(all_of(dep), all_of(indep))
+
+```
+
+Now we make some calculations. First let's see if we can come up with
+the most important variables using the Boruta algo. Where not
+interested in the results but just want to consume max CPU power.
+
+```{r}
+                                 
+b<-Boruta(f,data=d,maxRuns=750,doTrace=1)
+
+```
+
+because we can, we also run a 'normal' RF algo
+
+```{r}
+
+
+m <- ranger(f,data= d,
+            mtry=mtry,num.tree=1500,
+            quantreg=FALSE,
+            keep.inbag=TRUE,
+            importance="permutation")
+
+
+```
+
+
+
+
