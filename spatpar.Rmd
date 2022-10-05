@@ -1,0 +1,79 @@
+
+---
+title: "Profiling Spatial modelling Analysis"
+author: "Job Spijker"
+output: 
+  pdf_document:
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: yes
+urlcolor: blue    
+---
+
+```{r}
+
+remotes::install_github("gearslaboratory/gdalUtils")
+remotes::install_github("jspijker/datafile")
+
+# init
+library(rgdal)
+library(gdalUtils)
+library(sf)
+library(microbenchmark)
+library(raster)
+library(datafile)
+datafileInit()
+library(ranger)
+library(Boruta)
+```
+
+# Introduction
+
+Some tests to see what happens with parallel processing of data
+
+
+Create to rasters with different geometry, and then resample to a
+single geometry. 
+
+```{r}
+
+# Create raster, use Dutch RD extent
+createRast <- function(xmin=0,xmax=280000,
+                        ymin=300000,ymax=625000,
+                        resolution=25) {
+
+    xcells=(xmax-xmin)/resolution
+    ycells=(ymax-ymin)/resolution
+
+    x <- raster::raster(xmn=xmin,
+                xmx=xmax,
+                ymn=ymin,
+                ymx=ymax,
+                nrows=ycells,
+                ncols=xcells,
+                crs=CRS("+init=epsg:28992")
+                )
+
+
+    #x[] <- 1:ncell(x)
+    x[] <- round(runif(n = ncell(x), min = 0, max = 1000))
+    return(x)
+}
+
+
+r1 <- createRast()
+r2 <- createRast(resolution = 500)
+
+beginCluster(n = 4)
+new.rast <- resample(r2,r1,method="ngb")
+endCluster();
+
+
+
+
+```
+
+
+

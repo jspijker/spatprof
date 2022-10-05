@@ -12,6 +12,10 @@ urlcolor: blue
 ---
 
 ```{r}
+
+remotes::install_github("gearslaboratory/gdalUtils")
+remotes::install_github("jspijker/datafile")
+
 # init
 library(rgdal)
 library(gdalUtils)
@@ -156,6 +160,7 @@ b <- microbenchmark(createRast(),
                     read_write_sf()
 )
 b
+
 
 ```
 
