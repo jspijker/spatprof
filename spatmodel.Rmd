@@ -2,7 +2,7 @@
 title: "Profiling Spatial modelling Analysis"
 author: "Job Spijker"
 output: 
-  pdf_document:
+  html_document:
     highlight: tango
     toc: true
     toc_depth: 3
