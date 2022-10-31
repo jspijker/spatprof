@@ -119,7 +119,9 @@ calc_stats <- function(l = rast_lst) {
 
 ```{r}
 
-wfsuri <- "WFS:https://geodata.nationaalgeoregister.nl/wijkenbuurten2020/wfs?request=GetCapabilities&service=wfs"
+#wfsuri <- "WFS:https://geodata.nationaalgeoregister.nl/wijkenbuurten2020/wfs?request=GetCapabilities&service=wfs"
+
+wfsuri <- "WFS:https://service.pdok.nl/cbs/wijkenbuurten/2020/wfs/v1_0?request=getcapabilities&service=wfs"
 
 # get list of existing layers in WFS
 layers <- ogrListLayers(wfsuri)
