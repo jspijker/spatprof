@@ -62,14 +62,22 @@ createRast <- function(xmin=0,xmax=280000,
     return(x)
 }
 
+size <- 100000
+t1 <- system.time(r1 <- createRast(xmin = 0, xmax = size, 
+                                   ymin = 0, ymax = size))
+r2 <- createRast(xmin = 0, xmax = size, ymin = 0, ymax = size,
+                 resolution = 430)
 
-r1 <- createRast()
-r2 <- createRast(resolution = 500)
+beginCluster(n = 2)
+t2 <- system.time(
+                  new.rast <- resample(r1,r2,method="ngb")
+                  )
+endCluster()
 
-beginCluster(n = 4)
-new.rast <- resample(r2,r1,method="ngb")
-endCluster();
-
+cat("create rast time\n")
+t1
+cat("resample rast time\n")
+t2
 
 
 
